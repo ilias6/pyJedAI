@@ -191,6 +191,7 @@ class AbstractBlockBuilding(AbstractBlockProcessing):
                     .values.tolist()
             self._all_tokens.union(set(itertools.chain.from_iterable(self._entities_d2)))
 
+        t1 = time.time()
         entity_id = itertools.count()
         blocks = {}
         # ids_d1, ids_d2 = self.data.get_ids()
@@ -205,7 +206,9 @@ class AbstractBlockBuilding(AbstractBlockProcessing):
             self._progress_bar.update(1)
 
         # last_eid = eid
+        print(f' RESULT AT: {time.time() - t1}')
 
+        t1 = time.time()
         if not data.is_dirty_er:
             # for entity, eid in zip(self._entities_d2, ids_d2):
             for entity in self._entities_d2:
@@ -216,6 +219,7 @@ class AbstractBlockBuilding(AbstractBlockProcessing):
                     blocks[token].entities_D2.add(eid)
                 self._progress_bar.update(1)
 
+        print(f' RESULT AT: {time.time() - t1}')
         self.original_num_of_blocks = len(blocks)
         self.blocks = self._clean_blocks(blocks)
         self.num_of_blocks_dropped = len(blocks) - len(self.blocks)

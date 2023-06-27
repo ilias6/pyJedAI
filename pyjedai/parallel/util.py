@@ -74,28 +74,14 @@ def find_different_keys(list1, list2):
 
     return different_keys
 
-def merge_dicts(dicts):
+def merge_dicts(dict1, dict2):
     """
     Be careful!
     The value object must have a concat method implemented.
     """
 
-    merged_dict = dict()
-    keys = set().union(*[d.keys() for d in dicts])
-
-    for key in keys:
-        merged_value = None
-
-        # Iterate over dictionaries
-        for d in dicts:
-            if key in d:
-                value = d[key]
-                if merged_value is None:
-                    merged_value = value
-                else:
-                    merged_value.concat(value)
-
-        # Store merged value in the merged dictionary
-        merged_dict[key] = merged_value
-
-    return merged_dict
+    for key in dict2.keys():
+        try:
+            dict1[key].concat(dict2[key])
+        except KeyError:
+            dict1[key] = dict2[key]

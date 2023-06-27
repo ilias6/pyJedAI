@@ -1,3 +1,8 @@
+import math
+import re
+import time
+
+import nltk
 from mpire import WorkerPool
 
 from pyjedai.datamodel import Block
@@ -23,6 +28,7 @@ class MultiprocessBlockBuilding:
         self.pool = WorkerPool(n_jobs=n_processes, shared_objects=self.shared_data, start_method='fork')
         self.progress_bar = progress_bar
         self.split_data(data, parameters)
+        self.start_time = time.time()
 
     def split_data(self, data, parameters):
 
@@ -33,9 +39,11 @@ class MultiprocessBlockBuilding:
             self.parameters.append(parameters.copy())
 
     def run(self) -> None:
-        for res in self.pool.imap(self.build_blocks_for_entity, self.parameters, progress_bar=self.progress_bar):
-            self.blocks = merge_dicts([self.blocks, res])
-        self.pool.join()
+        self.start_time = time.time()
+        for res in self.pool.imap_unordered(self.build_blocks_for_entity, self.parameters):
+            print(f' RESULT AT: {time.time() - self.start_time}')
+            merge_dicts(self.blocks, res)
+        # self.pool.stop_and_join()
 
     def get_logs(self):
         return self.pool.get_insights()
@@ -74,4 +82,90 @@ class MultiprocessBlockBuilding:
                 else:
                     print("YOU DID SOMETHING VERY WRONG WITH ENTITIES ID!")
 
+        print(f' FINISHED AT: {time.time() - self.start_time}')
         return result
+
+
+def standard_blocking_tokenize_entity(entity: str) -> list:
+    """Produces a list of workds of a given string
+
+    Args:
+        entity (str): String representation  of an entity
+
+    Returns:
+        list: List of words
+    """
+    return list(set(filter(None, re.split('[\\W_]', entity.lower()))))
+
+
+def qgrams_tokenize_entity(qgrams, entity) -> set:
+    keys = set()
+    for token in standard_blocking_tokenize_entity(entity):
+        if len(token) < qgrams:
+            keys.add(token)
+        else:
+            keys.update(''.join(qg) for qg in nltk.ngrams(token, n=qgrams))
+    return keys
+
+
+def suffix_arrays_tokenize_entity(suffix_length, entity) -> set:
+    keys = set()
+    for token in standard_blocking_tokenize_entity(entity):
+        if len(token) < suffix_length:
+            keys.add(token)
+        else:
+            for length in range(0, len(token) - suffix_length + 1):
+                keys.add(token[length:])
+    return keys
+
+
+def extended_suffix_arrays_tokenize_entity(suffix_length, entity) -> set:
+    keys = set()
+    for token in standard_blocking_tokenize_entity(entity):
+        keys.add(token)
+        if len(token) > suffix_length:
+            for current_size in range(suffix_length, len(token)):
+                for letters in list(nltk.ngrams(token, n=current_size)):
+                    keys.add("".join(letters))
+    return keys
+
+
+def extended_qgrams_tokenize_entity(qgrams, max_qgrams, threshold, entity) -> set:
+    keys = set()
+    for token in super()._tokenize_entity(entity):
+        if len(token) < qgrams:
+            keys.add(token)
+        else:
+            qgrams = [''.join(qgram) for qgram in nltk.ngrams(token, n=qgrams)]
+            if len(qgrams) == 1:
+                keys.update(qgrams)
+            else:
+                if len(qgrams) > max_qgrams:
+                    qgrams = qgrams[:max_qgrams]
+
+                minimum_length = max(1, math.floor(len(qgrams) * threshold))
+                for i in range(minimum_length, len(qgrams) + 1):
+                    keys.update(qgrams_combinations(qgrams, i))
+
+    return keys
+
+
+def qgrams_combinations(sublists: list, sublist_length: int) -> list:
+    if sublist_length == 0 or len(sublists) < sublist_length:
+        return []
+
+    remaining_elements = sublists.copy()
+    last_sublist = remaining_elements.pop(len(sublists)-1)
+
+    combinations_exclusive_x = qgrams_combinations(remaining_elements, sublist_length)
+    combinations_inclusive_x = qgrams_combinations(remaining_elements, sublist_length-1)
+
+    resulting_combinations = combinations_exclusive_x.copy() if combinations_exclusive_x else []
+
+    if not combinations_inclusive_x: # is empty
+        resulting_combinations.append(last_sublist)
+    else:
+        for combination in combinations_inclusive_x:
+            resulting_combinations.append(combination+last_sublist)
+
+    return resulting_combinations

@@ -81,13 +81,21 @@ class WorkFlow(ABC):
                                                     if "params" in self.block_building \
                                                     else self.block_building['method']()
 
+        # block_building_blocks = \
+        #     block_building_method.build_blocks(data,
+        #                                                 attributes_1=self.block_building["attributes_1"] \
+        #                                                     if "attributes_1" in self.block_building else None,
+        #                                                 attributes_2=self.block_building["attributes_2"] \
+        #                                                     if "attributes_2" in self.block_building else None,
+        #                                                 tqdm_disable=workflow_step_tqdm_disable)
         block_building_blocks = \
-            block_building_method.build_blocks(data,
-                                               attributes_1=self.block_building["attributes_1"] \
+            block_building_method.build_blocks_parallel(data,
+                                                attributes_1=self.block_building["attributes_1"] \
                                                                 if "attributes_1" in self.block_building else None,
                                                 attributes_2=self.block_building["attributes_2"] \
                                                                 if "attributes_2" in self.block_building else None,
-                                                tqdm_disable=workflow_step_tqdm_disable)
+                                                tqdm_disable=workflow_step_tqdm_disable,
+                                                        num_processes=1)
         self.final_pairs = block_building_blocks
         res = block_building_method.evaluate(block_building_blocks,
                                             export_to_dict=True,

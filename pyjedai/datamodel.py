@@ -1,5 +1,7 @@
 """Datamodel of pyjedai.
 """
+import warnings
+
 import pandas as pd
 from pandas import DataFrame, concat
 
@@ -221,6 +223,61 @@ class Data:
             print("Number of matching pairs in ground-truth: ", len(self.ground_truth))
         print(56*"-", "\n")
 
+    def split(self, n:int = 0) -> list['Data']:
+        if n <= 0:
+            return []
+
+        chunks = []
+
+        len_1 = len(self.dataset_1)
+        len_2 = len(self.dataset_2)
+
+        chunk_size_1 = len_1 // n
+        remainder_1 = len_1 % n
+        chunk_size_2 = len_2 // n
+        remainder_2 = len_2 % n
+
+        chunk_start_1 = 0
+        chunk_start_2 = 0
+        for i in range(n):
+
+            chunk_end_1 = chunk_start_1+chunk_size_1
+            if remainder_1 > 0:
+                chunk_end_1 += 1
+                remainder_1 -= 1
+            if chunk_end_1 > len_1:
+                chunk_end_1 = len_1
+
+            chunk_end_2 = chunk_start_2+chunk_size_2
+            if remainder_2 > 0:
+                chunk_end_2 += 1
+                remainder_2 -= 1
+            if chunk_end_2 > len_2:
+                chunk_end_2 = len_2
+
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                partial_data = Data(
+                    dataset_1=self.dataset_1[chunk_start_1:chunk_end_1],
+                    attributes_1=self.attributes_1,
+                    id_column_name_1=self.id_column_name_1,
+                    dataset_2=self.dataset_2[chunk_start_2:chunk_end_2],
+                    attributes_2=self.attributes_2,
+                    id_column_name_2=self.id_column_name_2,
+                    ground_truth=self.ground_truth,
+                )
+            chunks.append(partial_data)
+
+            chunk_start_1 = chunk_end_1
+            chunk_start_2 = chunk_end_2
+
+        return chunks
+
+    def get_ids(self):
+        return (self.dataset_1[self.id_column_name_1],
+                self.dataset_2[self.id_column_name_2])
+
+
 class Block:
     """The main module used for storing entities in the blocking steps of pyjedai module. \
         Consists of 2 sets of profile entities 1 for Dirty ER and 2 for Clean-Clean ER.
@@ -269,3 +326,7 @@ class Block:
             print("Clean dataset 2: " + "[\033[1;34m" + str(len(self.entities_D2)) + \
             " entities\033[0m]")
             print(self.entities_D2)
+
+    def concat(self, other_block: 'Block') -> None:
+        self.entities_D1.update(other_block.entities_D1)
+        self.entities_D2.update(other_block.entities_D2)

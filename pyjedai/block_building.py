@@ -14,6 +14,7 @@ from tqdm.auto import tqdm
 
 from .datamodel import Block, Data, PYJEDAIFeature
 from .parallel.multiprocess_block_build import MultiprocessBlockBuilding
+from .parallel.multiprocess_block_building_complete import MultiprocessBlockBuildingComplete
 from .utils import (are_matching, drop_big_blocks_by_size,
                     drop_single_entity_blocks)
 from .evaluation import Evaluation
@@ -245,59 +246,57 @@ class AbstractBlockBuilding(AbstractBlockProcessing):
         self._progress_bar = tqdm(
             total=data.num_of_entities, desc=self._method_name, disable=tqdm_disable
         )
-
-
-        self._entities_d1 = data.dataset_1[attributes_1 if attributes_1 else data.attributes_1]
-        self._entities_d1 = self._entities_d1.apply(" ".join, axis=1)
-        self._entities_d1 = self._entities_d1.apply(self._tokenize_entity).values.tolist()
-
-        # self._entities_d1 = data.dataset_1[attributes_1 if attributes_1 else data.attributes_1] \
+        multi_build_blocks = MultiprocessBlockBuildingComplete(data, attributes_1, attributes_2, type(self).__name__, {"qgrams":  self.qgrams}, num_processes)
+        multi_build_blocks.run()
+        # self._entities_d1 = data.dataset_1[attributes_1 if attributes_1 else data.attributes_1]
         #     .apply(" ".join, axis=1) \
         #     .apply(self._tokenize_entity) \
         #     .values.tolist()
 
-        self._all_tokens = set(itertools.chain.from_iterable(self._entities_d1))
+        # self._all_tokens = set(itertools.chain.from_iterable(self._entities_d1))
 
-        if not data.is_dirty_er:
-            self._entities_d2 = data.dataset_2[attributes_2 if attributes_2 else data.attributes_2] \
-                .apply(" ".join, axis=1) \
-                .apply(self._tokenize_entity) \
-                .values.tolist()
-            self._all_tokens.union(set(itertools.chain.from_iterable(self._entities_d2)))
+        # self._entities_d2 = None
+        # if not data.is_dirty_er:
+        #     self._entities_d2 = data.dataset_2[attributes_2 if attributes_2 else data.attributes_2]
+        #         .apply(" ".join, axis=1) \
+        #         .apply(self._tokenize_entity) \
+        #         .values.tolist()
+        #     self._all_tokens.union(set(itertools.chain.from_iterable(self._entities_d2)))
 
-        ids_d1, ids_d2 = self.data.get_ids()
+        # ids_d1, ids_d2 = self.data.get_ids()
 
-        args = dict()
-        args["entities_id"] = 1
-        args["last_id"] = None
-        print(f'\nTIME: {time.time() - _start_time}')
+        # args = dict()
+        # args["entities_id"] = 1
+        # args["last_id"] = None
+        # print(f'\nTIME: {time.time() - _start_time}')
 
         # MultiprocessManager(_build_blocks_for_entity, (self._entities_d1, None), ids_d1, "entities", args, 1).run()
 
-        result = dict()
-        multiprocessing_tool = \
-            MultiprocessBlockBuilding(data=self._entities_d1, ids=ids_d1,
-                                      blocks=result, parameters=args,
-                                      n_processes=num_processes)
+        # result = dict()
+        # multiprocessing_tool = \
+        #     MultiprocessBlockBuilding(data=self._entities_d1, ids=ids_d1,
+        #                               blocks=result, parameters=args,
+        #                               n_processes=num_processes)
 
-        multiprocessing_tool.run()
-        print(f'\nTIME: {time.time() - _start_time}')
-        blocks = multiprocessing_tool.get_blocks()
-        print(f'\nTIME: {time.time() - _start_time}')
-
-        if not data.is_dirty_er:
-            args["entities_id"] = 2
-            # args["blocks"] = blocks
-            args["last_id"] = len(ids_d1)
-
-            multiprocessing_tool = \
-                MultiprocessBlockBuilding(data=self._entities_d2, ids=ids_d2,
-                                          blocks=blocks, parameters=args,
-                                          n_processes=num_processes)
-            multiprocessing_tool.run()
-            print(f'\nTIME: {time.time() - _start_time}')
-            blocks = multiprocessing_tool.get_blocks()
-            print(f'\nTIME: {time.time() - _start_time}')
+        # # multiprocessing_tool.run()
+        # # print(f'\nTIME: {time.time() - _start_time}')
+        # # blocks = multiprocessing_tool.get_blocks()
+        # # print(f'\nTIME: {time.time() - _start_time}')
+        #
+        # if not data.is_dirty_er:
+        #     args["entities_id"] = 2
+        #     # args["blocks"] = blocks
+        #     args["last_id"] = len(ids_d1)
+        #
+        #     multiprocessing_tool = \
+        #         MultiprocessBlockBuilding(data=self._entities_d2, ids=ids_d2,
+        #                                   blocks=blocks, parameters=args,
+        #                                   n_processes=num_processes)
+        #     multiprocessing_tool.run()
+        #     print(f'\nTIME: {time.time() - _start_time}')
+        #     blocks = multiprocessing_tool.get_blocks()
+        #     print(f'\nTIME: {time.time() - _start_time}')
+        blocks = multi_build_blocks.get_blocks()
 
         self.original_num_of_blocks = len(blocks)
         self.blocks = self._clean_blocks(blocks)

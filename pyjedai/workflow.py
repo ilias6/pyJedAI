@@ -95,7 +95,7 @@ class WorkFlow(ABC):
                                                 attributes_2=self.block_building["attributes_2"] \
                                                                 if "attributes_2" in self.block_building else None,
                                                 tqdm_disable=workflow_step_tqdm_disable,
-                                                        num_processes=1)
+                                                        num_processes=8)
         self.final_pairs = block_building_blocks
         res = block_building_method.evaluate(block_building_blocks,
                                             export_to_dict=True,

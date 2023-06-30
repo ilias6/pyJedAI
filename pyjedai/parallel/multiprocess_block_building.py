@@ -13,36 +13,43 @@ class SharedData:
         self.data = data
         self.ids = ids
 
-class MultiprocessBlockBuildingComplete:
+class MultiprocessBlockBuilding:
     def __init__(
-            self, data, attributes_1: list = None, attributes_2: list = None,
-            block_class_name = None, tokenize_method_params:dict = None, n_processes: int = 1
+            self, data, block_class, attributes_1: list = None, attributes_2: list = None,
+            n_processes: int = 1
     ) -> any:
         self.n_processes = n_processes
         self.ids = data.get_ids()
         self.data = data
         self.attributes_1 = attributes_1
         self.attributes_2 = attributes_2
-        self.block_class_name = block_class_name
-        self.resolve_tokenize_method()
-        self.tokenize_method_params = tokenize_method_params
+        self.resolve_tokenize_method(block_class)
         self.blocks = dict()
         self.parameters = []
-        self.shared_data = SharedData(data, self.ids)
-        self.pool = WorkerPool(n_jobs=n_processes, shared_objects=self.shared_data, start_method='fork')
         self.generate_process_parameters()
+        self.shared_data = SharedData(self.chunked_data, self.ids)
+        self.pool = WorkerPool(n_jobs=n_processes, shared_objects=self.shared_data, start_method='fork')
 
-    def resolve_tokenize_method(self):
-        if self.block_class_name is None or self.block_class_name == "StandardBlocking":
+    def resolve_tokenize_method(self, block_class):
+        block_class_name = type(block_class).__name__
+
+        if block_class_name == "StandardBlocking":
             self.tokenize_method = standard_blocking_tokenize_entity
-        elif self.block_class_name == "QGramsBlocking":
+            self.tokenize_method_params = {}
+        elif block_class_name == "QGramsBlocking":
             self.tokenize_method = qgrams_tokenize_entity
-        elif self.block_class_name == "SuffixArraysBlocking":
+            self.tokenize_method_params = {"qgrams": block_class.qgrams}
+        elif block_class_name == "SuffixArraysBlocking":
             self.tokenize_method = suffix_arrays_tokenize_entity
-        elif self.block_class_name == "ExtendedSuffixArraysBlocking":
+            self.tokenize_method_params = {"suffix_length": block_class.suffix_length}
+        elif block_class_name == "ExtendedSuffixArraysBlocking":
             self.tokenize_method = extended_suffix_arrays_tokenize_entity
-        elif self.block_class_name == "ExtendedQGramsBlocking":
+            self.tokenize_method_params = {"suffix_length": block_class.suffix_length}
+        elif block_class_name == "ExtendedQGramsBlocking":
             self.tokenize_method = extended_qgrams_tokenize_entity
+            self.tokenize_method_params = {"qgrams": block_class.suffix_length,
+                                           "max_qgrams": block_class.MAX_QGRAMS,
+                                           "threshold": block_class.threshold}
 
     def generate_process_parameters(self):
         self.chunked_data = self.data.split(self.n_processes)
@@ -50,8 +57,12 @@ class MultiprocessBlockBuildingComplete:
         batched_indices_1 = batchify(self.ids[0], self.n_processes)
         batched_indices_2 = batchify(self.ids[1], self.n_processes)
 
+
         parameters = dict()
+        pid = 0
         for indices_1, indices_2 in zip(batched_indices_1, batched_indices_2):
+            parameters["pid"] = pid
+            pid += 1
             parameters["ids_1_indices"] = indices_1
             parameters["ids_2_indices"] = indices_2
             parameters["attributes_1"] = self.attributes_1
@@ -69,21 +80,21 @@ class MultiprocessBlockBuildingComplete:
         return self.blocks
 
 
-def build_blocks(process_data, ids_1_indices, ids_2_indices, last_id,
+def build_blocks(process_data, pid, ids_1_indices, ids_2_indices, last_id,
                  attributes_1, attributes_2, tokenize_method, tokenize_method_params):
 
-    data = process_data.data
+    data = process_data.data[pid]
     ids_1, ids_2 = process_data.ids
 
     _entities_d1 = data.dataset_1[attributes_1 if attributes_1 else data.attributes_1] \
         .apply(" ".join, axis=1) \
-        .apply(tokenize_method) \
+        .apply(lambda x: tokenize_method(x, **tokenize_method_params)) \
         .values.tolist()
 
     if not data.is_dirty_er:
         _entities_d2 = data.dataset_2[attributes_2 if attributes_2 else data.attributes_2] \
             .apply(" ".join, axis=1) \
-            .apply(tokenize_method) \
+            .apply(lambda x: tokenize_method(x, **tokenize_method_params)) \
             .values.tolist()
 
 
@@ -91,6 +102,7 @@ def build_blocks(process_data, ids_1_indices, ids_2_indices, last_id,
 
     partial_ids_1 = ids_1[ids_1_indices[0]:ids_2_indices[1]]
     for eid, entity in zip(partial_ids_1, _entities_d1):
+        eid = int(eid)
         for token in entity:
             blocks.setdefault(token, Block())
             blocks[token].entities_D1.add(eid)
@@ -98,8 +110,8 @@ def build_blocks(process_data, ids_1_indices, ids_2_indices, last_id,
     if not data.is_dirty_er:
         partial_ids_2 = ids_2[ids_2_indices[0]:ids_2_indices[1]]
         for eid, entity in zip(partial_ids_2, _entities_d2):
+            eid = int(eid) + last_id
             for token in entity:
-                eid = eid + last_id
                 blocks.setdefault(token, Block())
                 blocks[token].entities_D2.add(eid)
 
@@ -150,22 +162,22 @@ def extended_suffix_arrays_tokenize_entity(entity, suffix_length) -> set:
     return keys
 
 
-def extended_qgrams_tokenize_entity(qgrams, max_qgrams, threshold, entity) -> set:
+def extended_qgrams_tokenize_entity(entity, qgrams, max_qgrams, threshold) -> set:
     keys = set()
     for token in super()._tokenize_entity(entity):
         if len(token) < qgrams:
             keys.add(token)
         else:
-            qgrams = [''.join(qgram) for qgram in nltk.ngrams(token, n=qgrams)]
-            if len(qgrams) == 1:
-                keys.update(qgrams)
+            qgrams_list = [''.join(qgram) for qgram in nltk.ngrams(token, n=qgrams)]
+            if len(qgrams_list) == 1:
+                keys.update(qgrams_list)
             else:
-                if len(qgrams) > max_qgrams:
-                    qgrams = qgrams[:max_qgrams]
+                if len(qgrams_list) > max_qgrams:
+                    qgrams_list = qgrams_list[:max_qgrams]
 
-                minimum_length = max(1, math.floor(len(qgrams) * threshold))
-                for i in range(minimum_length, len(qgrams) + 1):
-                    keys.update(qgrams_combinations(qgrams, i))
+                minimum_length = max(1, math.floor(len(qgrams_list) * threshold))
+                for i in range(minimum_length, len(qgrams_list) + 1):
+                    keys.update(qgrams_combinations(qgrams_list, i))
 
     return keys
 

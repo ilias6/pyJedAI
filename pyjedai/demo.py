@@ -18,37 +18,37 @@ from pyjedai.comparison_cleaning import (
 from pyjedai.matching import EntityMatching
 from pyjedai.clustering import ConnectedComponentsClustering
 
-# d1 = pd.read_csv("./../data/ccer/D2/abt.csv", sep="|", engine="python", na_filter=False).astype(str)
-# d2 = pd.read_csv("./../data/ccer/D2/buy.csv", sep='|', engine='python', na_filter=False).astype(str)
-# gt = pd.read_csv("./../data/ccer/D2/gt.csv", sep='|', engine='python')
-d1 = pd.read_csv("./../data/ccer/D8/amazon.csv", sep="|", engine="python", na_filter=False).astype(str)
-d2 = pd.read_csv("./../data/ccer/D8/walmart.csv", sep='|', engine='python', na_filter=False).astype(str)
-gt = pd.read_csv("./../data/ccer/D8/gt.csv", sep='|', engine='python')
+d1 = pd.read_csv("./../data/ccer/D2/abt.csv", sep="|", engine="python", na_filter=False).astype(str)
+d2 = pd.read_csv("./../data/ccer/D2/buy.csv", sep='|', engine='python', na_filter=False).astype(str)
+gt = pd.read_csv("./../data/ccer/D2/gt.csv", sep='|', engine='python')
+# d1 = pd.read_csv("./../data/ccer/D8/amazon.csv", sep="|", engine="python", na_filter=False).astype(str)
+# d2 = pd.read_csv("./../data/ccer/D8/walmart.csv", sep='|', engine='python', na_filter=False).astype(str)
+# gt = pd.read_csv("./../data/ccer/D8/gt.csv", sep='|', engine='python')
 
-# data = Data(
-#     dataset_1=d1,
-#     attributes_1=['id','name','description', 'price'],
-#     id_column_name_1='id',
-#     dataset_2=d2,
-#     attributes_2=['id','name','description', 'price'],
-#     id_column_name_2='id',
-#     ground_truth=gt,
-# )
+data = Data(
+    dataset_1=d1,
+    attributes_1=['id','name','description', 'price'],
+    id_column_name_1='id',
+    dataset_2=d2,
+    attributes_2=['id','name','description', 'price'],
+    id_column_name_2='id',
+    ground_truth=gt,
+)
 
 # id#title#description#manufacturer#price#aggregate value
 # id|title|modelno|price|shipweight|brand|dimensions|aggregate value
 # id|title|modelno|price|shipweight|brand|dimensions|aggregate value
-data = Data(
-    dataset_1=d1,
-    attributes_1=['id', 'title', 'modelno', 'price', 'shipweight', 'brand', 'dimensions', 'aggregate value'],
-    id_column_name_1='id',
-
-    dataset_2=d2,
-    attributes_2=['id', 'title', 'modelno', 'price', 'shipweight', 'brand', 'dimensions', 'aggregate value'],
-    id_column_name_2='id',
-
-    ground_truth=gt,
-)
+# data = Data(
+#     dataset_1=d1,
+#     attributes_1=['id', 'title', 'modelno', 'price', 'shipweight', 'brand', 'dimensions', 'aggregate value'],
+#     id_column_name_1='id',
+#
+#     dataset_2=d2,
+#     attributes_2=['id', 'title', 'modelno', 'price', 'shipweight', 'brand', 'dimensions', 'aggregate value'],
+#     id_column_name_2='id',
+#
+#     ground_truth=gt,
+# )
 
 
 data.print_specs()

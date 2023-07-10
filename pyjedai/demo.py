@@ -1,7 +1,5 @@
 import pandas as pd
 from pprint import pprint
-import javaobj
-import pickle
 
 import cProfile
 
@@ -74,8 +72,8 @@ w = WorkFlow(
     name="Workflow-QGramsBlocking"
 )
 
-cProfile.run('w.run(data, workflow_tqdm_enable=True, verbose=False)')
-# w.run(data, workflow_tqdm_enable=True, verbose=False)
+# cProfile.run('w.run(data, workflow_tqdm_enable=True, verbose=False)')
+w.run(data, workflow_tqdm_enable=True, verbose=False)
 
 
 pprint(w.to_df())

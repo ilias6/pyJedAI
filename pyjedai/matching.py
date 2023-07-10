@@ -4,6 +4,7 @@ import statistics
 from time import time
 
 import matplotlib.pyplot as plt
+import mpire
 import numpy as np
 from networkx import Graph
 from py_stringmatching.similarity_measure.affine import Affine
@@ -126,6 +127,10 @@ class EntityMatching(PYJEDAIFeature):
             suffix_pad: str = '$' # QgramTokenizer (if padding=True)
         ) -> None:
         self.pairs: Graph
+        self.delim_set = delim_set
+        self.padding = padding
+        self.prefix_pad = prefix_pad
+        self.suffix_pad = suffix_pad
         self.metric = metric
         self.qgram: int = qgram
         self.attributes: list = attributes
@@ -174,7 +179,7 @@ class EntityMatching(PYJEDAIFeature):
                     tokenizer, available_tokenizers
                 )
             )
-        
+
     def predict(self,
                 blocks: dict,
                 data: Data,
@@ -196,6 +201,67 @@ class EntityMatching(PYJEDAIFeature):
         self.tqdm_disable = tqdm_disable
         self.vectors_d1 = vectors_d1
         self.vectors_d2 = vectors_d2
+
+        if self.metric in vector_metrics:
+            if (vectors_d2 is not None and vectors_d1 is None):
+                raise ValueError("Embeddings of the first dataset not given")
+
+            if (vectors_d1 is not None):
+                self.vectors = vectors_d1
+                if (not data.is_dirty_er):
+                    if (vectors_d2 is None):
+                        raise ValueError("Embeddings of the second dataset not given")
+                    self.vectors = np.concatenate((vectors_d1, vectors_d2), axis=0)
+
+        if not blocks:
+            raise ValueError("Empty blocks structure")
+        self.data = data
+        self.pairs = Graph()
+        all_blocks = list(blocks.values())
+        self._progress_bar = tqdm(total=len(blocks),
+                                  desc=self._method_name + " (" + self.metric + ")",
+                                  disable=self.tqdm_disable)
+
+        if self.metric == 'tf-idf':
+            self._calculate_tfidf()
+
+        if 'Block' in str(type(all_blocks[0])):
+            self._predict_raw_blocks(blocks)
+        elif isinstance(all_blocks[0], set):
+            self._predict_prunned_blocks(blocks)
+        else:
+            raise AttributeError("Wrong type of Blocks")
+        self.execution_time = time() - start_time
+        self._progress_bar.close()
+
+        return self.pairs
+
+    def predict_parallel(self,
+                blocks: dict,
+                data: Data,
+                tqdm_disable: bool = False,
+                vectors_d1: np.array = None,
+                vectors_d2: np.array = None,
+                num_processes: int = None
+    ) -> Graph:
+        """Main method of entity matching. Inputs a set of blocks and outputs a graph \
+            that contains of the entity ids (nodes) and the similarity scores between them (edges).
+
+            Args:
+                blocks (dict): blocks of entities
+                data (Data): dataset module
+                tqdm_disable (bool, optional): Disables progress bar. Defaults to False.
+
+            Returns:
+                networkx.Graph: entity ids (nodes) and similarity scores between them (edges)
+        """
+        if num_processes == None:
+            num_processes = mpire.cpu_count()
+
+        start_time = time()
+        self.tqdm_disable = tqdm_disable
+        self.vectors_d1 = vectors_d1
+        self.vectors_d2 = vectors_d2
         
         if self.metric in vector_metrics:
             if(vectors_d2 is not None and vectors_d1 is None):
@@ -212,20 +278,18 @@ class EntityMatching(PYJEDAIFeature):
             raise ValueError("Empty blocks structure")
         self.data = data
         self.pairs = Graph()
-        all_blocks = list(blocks.values())
         self._progress_bar = tqdm(total=len(blocks),
                                   desc=self._method_name+" ("+self.metric+")",
                                   disable=self.tqdm_disable)
-        
+
         if self.metric == 'tf-idf':
             self._calculate_tfidf()
-        
-        if 'Block' in str(type(all_blocks[0])):
-            self._predict_raw_blocks(blocks)
-        elif isinstance(all_blocks[0], set):
-            self._predict_prunned_blocks(blocks)
-        else:
-            raise AttributeError("Wrong type of Blocks")
+
+        from pyjedai.parallel.multiprocess_entity_matching import MultiprocessEntityMatching
+        multiprocessing_matching = MultiprocessEntityMatching(self, blocks, n_processes=num_processes)
+        multiprocessing_matching.run()
+        self.pairs = multiprocessing_matching.get_pairs()
+
         self.execution_time = time() - start_time
         self._progress_bar.close()
 

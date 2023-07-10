@@ -1,3 +1,4 @@
+import math
 import warnings
 from itertools import islice
 
@@ -37,6 +38,16 @@ def batchify(data, n):
         chunk_start_1 = chunk_end_1
 
     return chunks_indices
+
+def split_dict_into_chunks(dictionary, num_chunks):
+    keys = list(dictionary.keys())
+    chunk_size = math.ceil(len(keys) / num_chunks)
+    chunks = []
+    for i in range(0, len(keys), chunk_size):
+        chunk_keys = keys[i:i+chunk_size]
+        chunk = {key: dictionary[key] for key in chunk_keys}
+        chunks.append(chunk)
+    return chunks
 
 def is_iterable(obj):
     try:

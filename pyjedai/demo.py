@@ -1,5 +1,8 @@
 import pandas as pd
 from pprint import pprint
+import javaobj
+import pickle
+
 import cProfile
 
 from datamodel import Data
@@ -17,6 +20,7 @@ from pyjedai.comparison_cleaning import (
 )
 from pyjedai.matching import EntityMatching
 from pyjedai.clustering import ConnectedComponentsClustering
+
 
 d1 = pd.read_csv("./../data/ccer/D2/abt.csv", sep="|", engine="python", na_filter=False).astype(str)
 d2 = pd.read_csv("./../data/ccer/D2/buy.csv", sep='|', engine='python', na_filter=False).astype(str)
@@ -70,8 +74,8 @@ w = WorkFlow(
     name="Workflow-QGramsBlocking"
 )
 
-# cProfile.run('w.run(data, workflow_tqdm_enable=True, verbose=False)')
-w.run(data, workflow_tqdm_enable=True, verbose=False)
+cProfile.run('w.run(data, workflow_tqdm_enable=True, verbose=False)')
+# w.run(data, workflow_tqdm_enable=True, verbose=False)
 
 
 pprint(w.to_df())

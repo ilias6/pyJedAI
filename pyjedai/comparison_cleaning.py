@@ -68,6 +68,44 @@ class AbstractComparisonCleaning(PYJEDAIFeature):
 
         return self._blocks
 
+    def process_parallel(
+            self,
+            blocks: dict,
+            data: Data,
+            tqdm_disable: bool = False,
+            num_of_processes: int = 1
+    ) -> dict:
+        """Main method for comparison cleaning
+
+        Args:
+            blocks (dict): blocks creted from previous steps of pyjedai
+            data (Data): dataset module
+            tqdm_disable (bool, optional): Disables tqdm progress bars. Defaults to False.
+
+        Returns:
+            dict: cleaned blocks
+        """
+        start_time = time()
+        self.tqdm_disable, self.data = tqdm_disable, data
+        self._limit = self.data.num_of_entities \
+            if self.data.is_dirty_er or self._node_centric else self.data.dataset_limit
+        self._progress_bar = tqdm(
+            total=self._limit,
+            desc=self._method_name,
+            disable=self.tqdm_disable
+        )
+
+        self._entity_index = create_entity_index(blocks, self.data.is_dirty_er)
+        self._num_of_blocks = len(blocks)
+        self._blocks: dict = blocks
+
+        self._blocks = self._apply_main_processing()
+
+        self.execution_time = time() - start_time
+        self._progress_bar.close()
+
+        return self._blocks
+
     def report(self) -> None:
         """Prints Block Building method configuration
         """

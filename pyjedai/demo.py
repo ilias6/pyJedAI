@@ -74,6 +74,7 @@ w = WorkFlow(
 
 # cProfile.run('w.run(data, workflow_tqdm_enable=True, verbose=False)')
 w.run(data, workflow_tqdm_enable=True, verbose=False)
+print(w.f1)
 
 
 pprint(w.to_df())

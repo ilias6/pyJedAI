@@ -1,5 +1,5 @@
 from mpire import WorkerPool
-from networkx import Graph, union
+from networkx import Graph, union, disjoint_union
 
 from pyjedai.matching import EntityMatching
 from pyjedai.parallel.util import batchify, split_dict_into_chunks
@@ -39,16 +39,24 @@ class MultiprocessEntityMatching:
                 suffix_pad=entity_matching.suffix_pad
             )
             entity_matching_part_object.pairs = Graph()
+            entity_matching_part_object.pairs.edges
             entity_matching_part_object._progress_bar = entity_matching._progress_bar
             parameters["entity_matching"] = entity_matching_part_object
             self.parameters.append(parameters.copy())
 
     def run(self):
-        for res in self.pool.imap(match, self.parameters):
-            self.pairs = union(self.pairs, res)
+        for res in self.pool.map(match, self.parameters):
+            # print(f'RES: {res.nodes}')
+            # print(f'SELF: {self.pairs.nodes}')
+            # self.pairs = union(self.pairs, res)
+            self.merge_graphs(res)
 
     def get_pairs(self):
         return self.pairs
+
+    def merge_graphs(self, other_pairs):
+        self.pairs.add_nodes_from(other_pairs.nodes())
+        self.pairs.add_edges_from(other_pairs.edges())
 
 def match(shared_data, entity_matching, pid, indices):
 

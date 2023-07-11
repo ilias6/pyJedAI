@@ -232,6 +232,7 @@ class EntityMatching(PYJEDAIFeature):
         else:
             raise AttributeError("Wrong type of Blocks")
         self.execution_time = time() - start_time
+        print(f'Time: {self.execution_time}')
         self._progress_bar.close()
 
         return self.pairs
@@ -291,6 +292,7 @@ class EntityMatching(PYJEDAIFeature):
         self.pairs = multiprocessing_matching.get_pairs()
 
         self.execution_time = time() - start_time
+        print(f'Time: {self.execution_time}')
         self._progress_bar.close()
 
         return self.pairs

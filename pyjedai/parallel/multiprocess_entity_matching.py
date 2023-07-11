@@ -25,11 +25,8 @@ class MultiprocessEntityMatching:
     def generate_task_objects(self, entity_matching, blocks):
         batched_indices = batchify(blocks, self.n_processes)
         parameters = dict()
-        pid = 0
-        for indices in batched_indices:
+        for pid in range(len(self.chunked_blocks)):
             parameters["pid"] = pid
-            pid += 1
-            parameters["indices"] = indices
             entity_matching_part_object = EntityMatching(
                 metric=entity_matching.metric, tokenizer=entity_matching.tokenizer,
                 similarity_threshold=entity_matching.similarity_threshold,
@@ -45,10 +42,7 @@ class MultiprocessEntityMatching:
             self.parameters.append(parameters.copy())
 
     def run(self):
-        for res in self.pool.map(match, self.parameters):
-            # print(f'RES: {res.nodes}')
-            # print(f'SELF: {self.pairs.nodes}')
-            # self.pairs = union(self.pairs, res)
+        for res in self.pool.imap_unordered(match, self.parameters):
             self.merge_graphs(res)
 
     def get_pairs(self):
@@ -58,9 +52,7 @@ class MultiprocessEntityMatching:
         self.pairs.add_nodes_from(other_pairs.nodes())
         self.pairs.add_edges_from(other_pairs.edges())
 
-def match(shared_data, entity_matching, pid, indices):
-
-    print(f'I am {pid} and I have blocks: {indices[0]} - {indices[1]}')
+def match(shared_data, entity_matching, pid):
 
     entity_matching.data = shared_data.data
     blocks = shared_data.chunked_blocks[pid]

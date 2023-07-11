@@ -56,10 +56,6 @@ data = Data(
 data.print_specs()
 pprint(data.dataset_1.head(2))
 
-n_processes = 8
-splitted = data.split(n_processes)
-splitted = []
-
 w = WorkFlow(
     block_building = dict( method=QGramsBlocking, params=dict(qgrams=3) ),
     block_cleaning = [
@@ -74,7 +70,6 @@ w = WorkFlow(
 
 # cProfile.run('w.run(data, workflow_tqdm_enable=True, verbose=False)')
 w.run(data, workflow_tqdm_enable=True, verbose=False)
-print(w.f1)
 
 
 pprint(w.to_df())

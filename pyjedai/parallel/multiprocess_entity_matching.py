@@ -18,12 +18,11 @@ class MultiprocessEntityMatching:
         self.chunked_blocks = split_dict_into_chunks(blocks, self.n_processes)
         self.shared_data = SharedData(entity_matching.data, blocks, self.chunked_blocks)
         self.parameters = []
-        self.generate_task_objects(entity_matching, blocks)
+        self.generate_task_objects(entity_matching)
         self.pool = WorkerPool(n_jobs=n_processes, shared_objects=self.shared_data, start_method='fork')
         self.pairs = Graph()
 
-    def generate_task_objects(self, entity_matching, blocks):
-        batched_indices = batchify(blocks, self.n_processes)
+    def generate_task_objects(self, entity_matching):
         parameters = dict()
         for pid in range(len(self.chunked_blocks)):
             parameters["pid"] = pid
@@ -36,7 +35,6 @@ class MultiprocessEntityMatching:
                 suffix_pad=entity_matching.suffix_pad
             )
             entity_matching_part_object.pairs = Graph()
-            entity_matching_part_object.pairs.edges
             entity_matching_part_object._progress_bar = entity_matching._progress_bar
             parameters["entity_matching"] = entity_matching_part_object
             self.parameters.append(parameters.copy())

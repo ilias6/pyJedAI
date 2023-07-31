@@ -2,7 +2,7 @@ from mpire import WorkerPool
 from networkx import Graph, union, disjoint_union
 
 from pyjedai.matching import EntityMatching
-from pyjedai.parallel.util import batchify, split_dict_into_chunks
+from pyjedai.parallel.util import batchify, split_dict_into_chunks, split_enum_dict_into_chunks
 
 
 class SharedData:
@@ -15,7 +15,7 @@ class MultiprocessEntityMatching:
     def __init__(self, entity_matching, blocks, n_processes: int = 1
     ) -> any:
         self.n_processes = n_processes
-        self.chunked_blocks = split_dict_into_chunks(blocks, self.n_processes)
+        self.chunked_blocks = split_enum_dict_into_chunks(blocks, self.n_processes)
         self.shared_data = SharedData(entity_matching.data, blocks, self.chunked_blocks)
         self.parameters = []
         self.generate_task_objects(entity_matching)

@@ -1,3 +1,4 @@
+import mpire
 import sys
 import warnings
 from itertools import chain
@@ -25,6 +26,7 @@ class AbstractComparisonCleaning(PYJEDAIFeature):
     def __init__(self) -> None:
         super().__init__()
         self._limit: int
+        self._first_entity:int = 0
         self._num_of_blocks: int
         self._valid_entities: set() = set()
         self._entity_index: dict
@@ -32,6 +34,7 @@ class AbstractComparisonCleaning(PYJEDAIFeature):
         self._blocks: dict # initial blocks
         self.blocks = dict() # blocks after CC
         self._node_centric: bool
+        self._num_of_processes: int = 1
 
     def process(
             self,
@@ -64,6 +67,7 @@ class AbstractComparisonCleaning(PYJEDAIFeature):
         self._blocks: dict = blocks
         self._blocks = self._apply_main_processing()
         self.execution_time = time() - start_time
+        print(self.execution_time)
         self._progress_bar.close()
 
         return self._blocks
@@ -73,7 +77,7 @@ class AbstractComparisonCleaning(PYJEDAIFeature):
             blocks: dict,
             data: Data,
             tqdm_disable: bool = False,
-            num_of_processes: int = 1
+            num_of_processes: int = None
     ) -> dict:
         """Main method for comparison cleaning
 
@@ -85,6 +89,9 @@ class AbstractComparisonCleaning(PYJEDAIFeature):
         Returns:
             dict: cleaned blocks
         """
+        if (num_of_processes is None):
+            num_of_processes = mpire.cpu_count()
+
         start_time = time()
         self.tqdm_disable, self.data = tqdm_disable, data
         self._limit = self.data.num_of_entities \
@@ -98,10 +105,18 @@ class AbstractComparisonCleaning(PYJEDAIFeature):
         self._entity_index = create_entity_index(blocks, self.data.is_dirty_er)
         self._num_of_blocks = len(blocks)
         self._blocks: dict = blocks
+        self._num_of_processes = num_of_processes
 
-        self._blocks = self._apply_main_processing()
+        from pyjedai.parallel.multiprocess_comparison_cleaning import MultiprocessComparisonCleaning
+        multiprocess_comparison_cleaning = MultiprocessComparisonCleaning(self, num_of_processes)
+
+        # self._blocks = self._apply_main_processing()
+        multiprocess_comparison_cleaning.run()
+
+        self._blocks = multiprocess_comparison_cleaning.get_blocks()
 
         self.execution_time = time() - start_time
+        print(self.execution_time)
         self._progress_bar.close()
 
         return self._blocks
@@ -295,7 +310,7 @@ class ComparisonPropagation(AbstractComparisonCleaning):
 
     def _apply_main_processing(self) -> dict:
         self.blocks = {}
-        for i in range(0, self._limit):
+        for i in range(self._first_entity, self._limit):
             if i in self._entity_index:
                 self._valid_entities.clear()
                 associated_blocks = self._entity_index[i]
@@ -332,7 +347,7 @@ class WeightedEdgePruning(AbstractMetablocking):
         self._num_of_edges: float
 
     def _prune_edges(self) -> dict:
-        for i in range(0, self._limit):
+        for i in range(self._first_entity, self._limit):
             self._process_entity(i)
             self._verify_valid_entities(i)
             self._progress_bar.update(1)
@@ -412,10 +427,14 @@ class CardinalityEdgePruning(WeightedEdgePruning):
     def _prune_edges(self) -> dict:
         self.blocks = defaultdict(set)
         self._top_k_edges = PriorityQueue(int(2*self._threshold))
-        for i in range(0, self._limit):
+        for i in range(self._first_entity, self._limit):
             self._process_entity(i)
             self._verify_valid_entities(i)
             self._progress_bar.update(1)
+
+        if (self._num_of_processes > 1):
+            return None
+
         while not self._top_k_edges.empty():
             comparison = self._top_k_edges.get()
             self.blocks[comparison[1]].add(comparison[2])

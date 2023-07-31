@@ -81,21 +81,21 @@ class WorkFlow(ABC):
                                                     if "params" in self.block_building \
                                                     else self.block_building['method']()
 
-        block_building_blocks = \
-            block_building_method.build_blocks(data,
-                                                        attributes_1=self.block_building["attributes_1"] \
-                                                            if "attributes_1" in self.block_building else None,
-                                                        attributes_2=self.block_building["attributes_2"] \
-                                                            if "attributes_2" in self.block_building else None,
-                                                        tqdm_disable=workflow_step_tqdm_disable)
         # block_building_blocks = \
-        #     block_building_method.build_blocks_parallel(data,
-        #                                         attributes_1=self.block_building["attributes_1"] \
-        #                                                         if "attributes_1" in self.block_building else None,
-        #                                         attributes_2=self.block_building["attributes_2"] \
-        #                                                         if "attributes_2" in self.block_building else None,
-        #                                         tqdm_disable=workflow_step_tqdm_disable,
-        #                                                 num_processes=2)
+        #     block_building_method.build_blocks(data,
+        #                                                 attributes_1=self.block_building["attributes_1"] \
+        #                                                     if "attributes_1" in self.block_building else None,
+        #                                                 attributes_2=self.block_building["attributes_2"] \
+        #                                                     if "attributes_2" in self.block_building else None,
+        #                                                 tqdm_disable=workflow_step_tqdm_disable)
+        block_building_blocks = \
+            block_building_method.build_blocks_parallel(data,
+                                                attributes_1=self.block_building["attributes_1"] \
+                                                                if "attributes_1" in self.block_building else None,
+                                                attributes_2=self.block_building["attributes_2"] \
+                                                                if "attributes_2" in self.block_building else None,
+                                                tqdm_disable=workflow_step_tqdm_disable,
+                                                        num_processes=4)
         self.final_pairs = block_building_blocks
         res = block_building_method.evaluate(block_building_blocks,
                                             export_to_dict=True,
@@ -134,12 +134,19 @@ class WorkFlow(ABC):
             comparison_cleaning_method = self.comparison_cleaning['method'](**self.comparison_cleaning["params"]) \
                                             if "params" in self.comparison_cleaning \
                                             else self.comparison_cleaning['method']()
+            # self.final_pairs = \
+            # comparison_cleaning_blocks = \
+            # comparison_cleaning_method.process_parallel(block_cleaning_blocks if block_cleaning_blocks is not None \
+            #                                         else block_building_blocks,
+            #                                     data,
+            #                                     tqdm_disable=workflow_step_tqdm_disable,
+            #                                             num_of_processes=8)
             self.final_pairs = \
-            comparison_cleaning_blocks = \
-            comparison_cleaning_method.process(block_cleaning_blocks if block_cleaning_blocks is not None \
-                                                    else block_building_blocks,
-                                                data,
-                                                tqdm_disable=workflow_step_tqdm_disable)
+                comparison_cleaning_blocks = \
+                comparison_cleaning_method.process(block_cleaning_blocks if block_cleaning_blocks is not None \
+                                                                else block_building_blocks,
+                                                            data,
+                                                            tqdm_disable=workflow_step_tqdm_disable)
             res = comparison_cleaning_method.evaluate(comparison_cleaning_blocks,
                                                       export_to_dict=True,
                                                       with_classification_report=with_classification_report,
@@ -152,19 +159,19 @@ class WorkFlow(ABC):
         entity_matching_method = self.entity_matching['method'](**self.entity_matching["params"]) \
                                         if "params" in self.entity_matching \
                                         else self.entity_matching['method']()
-        self.final_pairs = em_graph = entity_matching_method.predict_parallel(
-            comparison_cleaning_blocks if comparison_cleaning_blocks is not None \
-                else block_building_blocks,
-            data,
-            tqdm_disable=workflow_step_tqdm_disable,
-            num_processes=12
-        )
-        # self.final_pairs = em_graph = entity_matching_method.predict(
+        # self.final_pairs = em_graph = entity_matching_method.predict_parallel(
         #     comparison_cleaning_blocks if comparison_cleaning_blocks is not None \
         #         else block_building_blocks,
         #     data,
-        #     tqdm_disable=workflow_step_tqdm_disable
+        #     tqdm_disable=workflow_step_tqdm_disable,
+        #     num_processes=8
         # )
+        self.final_pairs = em_graph = entity_matching_method.predict(
+            comparison_cleaning_blocks if comparison_cleaning_blocks is not None \
+                else block_building_blocks,
+            data,
+            tqdm_disable=workflow_step_tqdm_disable
+        )
 
         res = entity_matching_method.evaluate(em_graph,
                                                 export_to_dict=True,

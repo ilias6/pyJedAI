@@ -22,3 +22,4 @@ faiss-cpu>=1.7
 optuna>=3.0
 py-stringmatching>=0.4
 mpire>=2.7.1
+numba

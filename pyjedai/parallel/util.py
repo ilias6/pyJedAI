@@ -1,6 +1,7 @@
 import math
 import warnings
 from itertools import islice
+from queue import PriorityQueue
 
 
 def batch(iterable, size):
@@ -39,7 +40,21 @@ def batchify(data, n):
 
     return chunks_indices
 
-def split_dict_into_chunks(dictionary, num_chunks):
+def merge_priority_queue(q1, q2):
+    merged_queue = PriorityQueue()
+
+    # Pop elements from queue1 and queue2 and insert them into merged_queue
+    while not q1.empty():
+        item = q1.get()
+        merged_queue.put(item)
+
+    while not q2.empty():
+        item = q2.get()
+        merged_queue.put(item)
+
+    return merged_queue
+
+def split_enum_dict_into_chunks(dictionary, num_chunks):
     keys = list(dictionary.keys())
     chunk_size = math.ceil(len(keys) / num_chunks)
     chunks = []
@@ -48,6 +63,25 @@ def split_dict_into_chunks(dictionary, num_chunks):
         chunk = {key: dictionary[key] for key in chunk_keys}
         chunks.append(chunk)
     return chunks
+
+def split_dict_into_chunks(dictionary, num_chunks):
+    keys = list(dictionary.keys())
+    num_keys = len(keys)
+    keys_per_dict = math.ceil(num_keys / num_chunks)
+
+    list_of_dicts = []
+    start = 0
+    end = keys_per_dict
+
+    for _ in range(num_chunks):
+        dict_keys = keys[start:end]
+        sub_dict = {key: dictionary[key] for key in dict_keys}
+        list_of_dicts.append(sub_dict)
+
+        start += keys_per_dict
+        end += keys_per_dict
+
+    return list_of_dicts
 
 def is_iterable(obj):
     try:

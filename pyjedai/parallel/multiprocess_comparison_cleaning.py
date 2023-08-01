@@ -6,7 +6,7 @@ from time import time
 from mpire import WorkerPool
 from tqdm import tqdm
 
-from pyjedai.comparison_cleaning import CardinalityEdgePruning
+from pyjedai.comparison_cleaning import CardinalityEdgePruning, WeightedEdgePruning
 from pyjedai.parallel.util import split_dict_into_chunks, merge_dicts, split_enum_dict_into_chunks
 
 
@@ -43,6 +43,8 @@ class MultiprocessComparisonCleaning:
     def run(self):
         if isinstance(self.shared_data.cc_main_object, CardinalityEdgePruning):
             self.run_CEP()
+        # if isinstance(self.shared_data.cc_main_object, WeightedEdgePruning):
+        #     self.run_WEP()
         else:
             for res in self.pool.map(apply_processing, self.parameters):
                 self.blocks.update(res)
@@ -69,12 +71,15 @@ class MultiprocessComparisonCleaning:
             comparison = top_k_edges.get()
             self.blocks[comparison[1]].add(comparison[2])
 
-
 def init_cc_class(cc_class):
     if isinstance(cc_class, CardinalityEdgePruning):
         cc_class._set_threshold()
         cc_class._top_k_edges = PriorityQueue(cc_class._threshold*2)
         return CardinalityEdgePruning(cc_class.weighting_scheme)
+    if isinstance(cc_class, WeightedEdgePruning):
+        # cc_class._set_threshold()
+        # cc_class._top_k_edges = PriorityQueue(cc_class._threshold*2)
+        return WeightedEdgePruning(cc_class.weighting_scheme)
 
 def apply_processing(shared_data, pid, cc, entity_start, entity_end):
     cc.tqdm_disable, cc.data = shared_data.cc_main_object.tqdm_disable, shared_data.cc_main_object.data

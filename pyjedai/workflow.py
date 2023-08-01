@@ -134,19 +134,19 @@ class WorkFlow(ABC):
             comparison_cleaning_method = self.comparison_cleaning['method'](**self.comparison_cleaning["params"]) \
                                             if "params" in self.comparison_cleaning \
                                             else self.comparison_cleaning['method']()
-            # self.final_pairs = \
-            # comparison_cleaning_blocks = \
-            # comparison_cleaning_method.process_parallel(block_cleaning_blocks if block_cleaning_blocks is not None \
-            #                                         else block_building_blocks,
-            #                                     data,
-            #                                     tqdm_disable=workflow_step_tqdm_disable,
-            #                                             num_of_processes=8)
             self.final_pairs = \
-                comparison_cleaning_blocks = \
-                comparison_cleaning_method.process(block_cleaning_blocks if block_cleaning_blocks is not None \
-                                                                else block_building_blocks,
-                                                            data,
-                                                            tqdm_disable=workflow_step_tqdm_disable)
+            comparison_cleaning_blocks = \
+            comparison_cleaning_method.process_parallel(block_cleaning_blocks if block_cleaning_blocks is not None \
+                                                    else block_building_blocks,
+                                                data,
+                                                tqdm_disable=workflow_step_tqdm_disable,
+                                                        num_of_processes=4)
+            # self.final_pairs = \
+            #     comparison_cleaning_blocks = \
+            #     comparison_cleaning_method.process(block_cleaning_blocks if block_cleaning_blocks is not None \
+            #                                                     else block_building_blocks,
+            #                                                 data,
+            #                                                 tqdm_disable=workflow_step_tqdm_disable)
             res = comparison_cleaning_method.evaluate(comparison_cleaning_blocks,
                                                       export_to_dict=True,
                                                       with_classification_report=with_classification_report,

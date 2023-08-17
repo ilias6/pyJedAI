@@ -140,7 +140,7 @@ class WorkFlow(ABC):
                                                     else block_building_blocks,
                                                 data,
                                                 tqdm_disable=workflow_step_tqdm_disable,
-                                                        num_of_processes=4)
+                                                        num_of_processes=16)
             # self.final_pairs = \
             #     comparison_cleaning_blocks = \
             #     comparison_cleaning_method.process(block_cleaning_blocks if block_cleaning_blocks is not None \
@@ -159,19 +159,19 @@ class WorkFlow(ABC):
         entity_matching_method = self.entity_matching['method'](**self.entity_matching["params"]) \
                                         if "params" in self.entity_matching \
                                         else self.entity_matching['method']()
-        # self.final_pairs = em_graph = entity_matching_method.predict_parallel(
-        #     comparison_cleaning_blocks if comparison_cleaning_blocks is not None \
-        #         else block_building_blocks,
-        #     data,
-        #     tqdm_disable=workflow_step_tqdm_disable,
-        #     num_processes=8
-        # )
-        self.final_pairs = em_graph = entity_matching_method.predict(
+        self.final_pairs = em_graph = entity_matching_method.predict_parallel(
             comparison_cleaning_blocks if comparison_cleaning_blocks is not None \
                 else block_building_blocks,
             data,
-            tqdm_disable=workflow_step_tqdm_disable
+            tqdm_disable=workflow_step_tqdm_disable,
+            num_processes=16
         )
+        # self.final_pairs = em_graph = entity_matching_method.predict(
+        #     comparison_cleaning_blocks if comparison_cleaning_blocks is not None \
+        #         else block_building_blocks,
+        #     data,
+        #     tqdm_disable=workflow_step_tqdm_disable
+        # )
 
         res = entity_matching_method.evaluate(em_graph,
                                                 export_to_dict=True,

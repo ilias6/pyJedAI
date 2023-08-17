@@ -384,6 +384,8 @@ class WeightedEdgePruning(AbstractMetablocking):
         self._num_of_edges = 0.0
         self._threshold = 0.0
 
+        # TODO Check which is correct
+        # for i in range(self._first_entity, self._limit):
         for i in range(0, self._limit):
             self._process_entity(i)
             self._update_threshold(i)
@@ -478,7 +480,7 @@ class CardinalityNodePruning(CardinalityEdgePruning):
 
     def _prune_edges(self) -> dict:
         self._nearest_entities = dict()
-        for i in range(0, self._limit):
+        for i in range(self._first_entity, self._limit):
             self._process_entity(i)
             self._verify_valid_entities(i)
             self._progress_bar.update(1)
@@ -574,7 +576,7 @@ class WeightedNodePruning(WeightedEdgePruning):
 
     def _set_threshold(self):
         self._average_weight = np.empty([self.data.num_of_entities], dtype=float)
-        for i in range(0, self._limit):
+        for i in range(self._first_entity, self._limit):
             self._process_entity(i)
             self._update_threshold(i)
 

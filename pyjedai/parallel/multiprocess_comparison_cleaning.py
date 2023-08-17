@@ -46,7 +46,7 @@ class MultiprocessComparisonCleaning:
         # if isinstance(self.shared_data.cc_main_object, WeightedEdgePruning):
         #     self.run_WEP()
         else:
-            for res in self.pool.map(apply_processing, self.parameters):
+            for res in self.pool.imap_unordered(apply_processing, self.parameters):
                 self.blocks.update(res)
 
     def get_blocks(self):
